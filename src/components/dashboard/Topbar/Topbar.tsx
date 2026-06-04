@@ -21,7 +21,7 @@ const Topbar: React.FC<{ onHamburgerClick: () => void }> = ({
   const { data: myProfileData } = useMyProfileQuery({});
 
   console.log("profile data", myProfileData);
-  const profile = myProfileData?.result;
+  const profile = myProfileData?.data;
 
   const token = Cookies.get("token");
 

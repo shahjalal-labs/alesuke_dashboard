@@ -9,7 +9,7 @@ const userApi = baseApi.injectEndpoints({
       }),
       providesTags: ["user"],
     }),
-    
+
     deleteUser: builder.mutation({
       query: (id) => ({
         url: `/admin/user/${id}`,
@@ -17,7 +17,15 @@ const userApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["user"],
     }),
+
+     getAllSales: builder.query({
+      query: ({page, limit}) => ({
+        url: `/admin/all-subscriptions?page=${page}&limit=${limit}`,
+        method: "GET",
+      }),
+      providesTags: ["user"],
+    }),
   }),
 });
 
-export const { useGetAllUsersQuery, useDeleteUserMutation } = userApi;
+export const { useGetAllUsersQuery, useDeleteUserMutation, useGetAllSalesQuery } = userApi;

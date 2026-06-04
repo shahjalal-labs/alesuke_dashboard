@@ -8,36 +8,35 @@ import { Input } from "@/components/ui/input";
 import SimpleLoader from "@/components/ui/SimpleLoader";
 import {
   useChangePasswordMutation,
-  useUpdateProfileMutation,
 } from "@/redux/api/admin/dashboarApi";
 import { useMyProfileQuery } from "@/redux/api/authApi";
-import { Edit, Eye, EyeOff, Info, Loader, Save, X } from "lucide-react";
+import { Eye, EyeOff, Info, Loader } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-export default function Settings() {
-  const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState("basic");
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    name: "",
-    email: "",
-    phone: "",
-    profileImage: "",
-  });
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>("");
+interface UserProfile {
+  id: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string | null;
+  profileImage: string | null;
+}
 
+interface ProfileResponse {
+  success: boolean;
+  message: string;
+  data: UserProfile;
+}
+
+export default function Settings() {
+  const [activeTab, setActiveTab] = useState("basic");
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const { data: profileData, isLoading, refetch } = useMyProfileQuery({});
-  const [updateProfileFn, { isLoading: isUpdating }] =
-    useUpdateProfileMutation();
+  const { data: profileData, isLoading } = useMyProfileQuery({});
   const [changePasswordFn, { isLoading: isChangingPassword }] =
     useChangePasswordMutation();
 
@@ -48,83 +47,6 @@ export default function Settings() {
       confirmPassword: "",
     },
   });
-
-  useEffect(() => {
-    if (profileData?.success && profileData?.result) {
-      const user = profileData.result;
-      setFormData({
-        firstName: user.firstName || "",
-        lastName: user.lastName || "",
-        name: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
-        email: user.email || "N/A",
-        phone: user.phone || "N/A",
-        profileImage: user.profileImage || profile.src,
-      });
-    }
-  }, [profileData]);
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleEditToggle = () => {
-    if (isEditing) {
-      if (profileData?.success && profileData?.result) {
-        const user = profileData.result;
-        setFormData({
-          firstName: user.firstName || "",
-          lastName: user.lastName || "",
-          name: `${user.firstName || ""} ${user.lastName || ""}`.trim(),
-          email: user.email || "N/A",
-          phone: user.phone || "N/A",
-          profileImage: user.profileImage || profile.src,
-        });
-      }
-      setSelectedImage(null);
-      setImagePreview("");
-    }
-    setIsEditing(!isEditing);
-  };
-
-  const handleSave = async () => {
-    try {
-      const formDataToSend = new FormData();
-      formDataToSend.append("firstName", formData.firstName);
-      formDataToSend.append("lastName", formData.lastName);
-      formDataToSend.append(
-        "phone",
-        formData.phone === "N/A" ? "" : formData.phone,
-      );
-
-      if (selectedImage) {
-        formDataToSend.append("profileImage", selectedImage);
-      }
-
-      const result = await updateProfileFn(formDataToSend).unwrap();
-
-      if (result?.success) {
-        toast.success("Profile updated successfully");
-        setIsEditing(false);
-        setSelectedImage(null);
-        setImagePreview("");
-        refetch();
-      }
-    } catch (error) {
-      console.error("Failed to update profile:", error);
-      toast.error("Failed to update profile");
-    }
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setSelectedImage(file);
-      setImagePreview(URL.createObjectURL(file));
-    }
-  };
 
   const onPasswordSubmit = async (data: any) => {
     if (data.newPassword !== data.confirmPassword) {
@@ -148,11 +70,11 @@ export default function Settings() {
     }
   };
 
-  const getImageSource = () => {
-    if (imagePreview) {
-      return imagePreview;
+  const getProfileImage = () => {
+    if (profileData?.data?.profileImage) {
+      return profileData.data.profileImage;
     }
-    return formData.profileImage || profile.src;
+    return profile.src;
   };
 
   if (isLoading) {
@@ -164,6 +86,8 @@ export default function Settings() {
       </div>
     );
   }
+
+  const userData = profileData?.data;
 
   return (
     <div className="bg-gray-50 p-4 sm:p-6 lg:p-8">
@@ -181,7 +105,7 @@ export default function Settings() {
                 }`}
               >
                 <span className="text-sm font-medium sm:text-base lg:text-lg">
-                  Basic
+                  Basic Information
                 </span>
                 <svg
                   className="h-5 w-5 flex-shrink-0"
@@ -230,151 +154,68 @@ export default function Settings() {
           <main className="min-w-0 flex-1 rounded-2xl bg-white p-4 sm:p-6 lg:p-8">
             {activeTab === "basic" ? (
               <>
-                <div className="mb-6 flex flex-col gap-4 border-b border-gray-200 pb-6 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+                <div className="mb-6 flex flex-col gap-4 border-b border-gray-200 pb-6 sm:mb-8">
                   <div className="flex items-center gap-3">
                     <h1 className="text-lg font-medium text-gray-900 sm:text-xl">
                       Profile Information
                     </h1>
                     <Info className="h-5 w-5 text-gray-400" />
                   </div>
-
-                  <Button
-                    onClick={handleEditToggle}
-                    variant={isEditing ? "outline" : "default"}
-                    className="flex w-full items-center justify-center gap-2 sm:w-auto"
-                  >
-                    {isEditing ? (
-                      <>
-                        <X className="h-4 w-4" />
-                        Cancel
-                      </>
-                    ) : (
-                      <span className="flex items-center gap-1 text-white">
-                        <Edit className="h-4 w-4 text-white" />
-                        Edit
-                      </span>
-                    )}
-                  </Button>
                 </div>
 
                 <div className="mb-6 sm:mb-8">
                   <h2 className="mb-4 text-base font-medium text-gray-900">
-                    Photo Profile
+                    Profile Photo
                   </h2>
                   <div className="relative inline-block">
-                    <div className="h-20 w-20 overflow-hidden rounded-full bg-gray-200">
+                    <div className="h-24 w-24 overflow-hidden rounded-full bg-gray-200">
                       <Image
-                        src={getImageSource()}
+                        src={getProfileImage()}
                         alt="Profile"
                         className="h-full w-full object-cover"
-                        width={80}
-                        height={80}
+                        width={96}
+                        height={96}
                       />
                     </div>
-
-                    {isEditing && (
-                      <label
-                        htmlFor="profileImage"
-                        className="absolute -bottom-1 -right-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-gray-200 bg-white hover:bg-gray-50"
-                      >
-                        <Edit className="h-4 w-4 text-gray-600" />
-                        <input
-                          type="file"
-                          id="profileImage"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          className="hidden"
-                        />
-                      </label>
-                    )}
                   </div>
-
-                  {selectedImage && (
-                    <p className="mt-2 text-sm text-gray-500">
-                      Selected: {selectedImage.name}
-                    </p>
-                  )}
                 </div>
 
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-6">
                   <div>
                     <label className="mb-3 block text-base font-medium text-gray-900">
-                      First Name
+                      Full Name
                     </label>
                     <Input
-                      value={formData.firstName}
-                      onChange={(e) =>
-                        handleInputChange("firstName", e.target.value)
-                      }
-                      disabled={!isEditing}
-                      className="h-14 w-full rounded-xl border-gray-200 px-4 text-base focus:border-orange-500 focus:ring-orange-500 disabled:cursor-not-allowed disabled:bg-gray-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-3 block text-base font-medium text-gray-900">
-                      Last Name
-                    </label>
-                    <Input
-                      value={formData.lastName}
-                      onChange={(e) =>
-                        handleInputChange("lastName", e.target.value)
-                      }
-                      disabled={!isEditing}
-                      className="h-14 w-full rounded-xl border-gray-200 px-4 text-base focus:border-orange-500 focus:ring-orange-500 disabled:cursor-not-allowed disabled:bg-gray-100"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="mb-3 block text-base font-medium text-gray-900">
-                      Email address
-                    </label>
-                    <Input
-                      type="email"
-                      value={formData.email}
+                      value={userData?.fullName || "N/A"}
                       disabled
                       className="h-14 w-full cursor-not-allowed rounded-xl border-gray-200 bg-gray-100 px-4 text-base"
                     />
                   </div>
 
-                  <div className="md:col-span-2">
+                  <div>
+                    <label className="mb-3 block text-base font-medium text-gray-900">
+                      Email Address
+                    </label>
+                    <Input
+                      type="email"
+                      value={userData?.email || "N/A"}
+                      disabled
+                      className="h-14 w-full cursor-not-allowed rounded-xl border-gray-200 bg-gray-100 px-4 text-base"
+                    />
+                  </div>
+
+                  <div>
                     <label className="mb-3 block text-base font-medium text-gray-900">
                       Phone Number
                     </label>
                     <Input
                       type="tel"
-                      value={formData.phone}
-                      onChange={(e) =>
-                        handleInputChange("phone", e.target.value)
-                      }
-                      disabled={!isEditing}
-                      placeholder="Add phone number"
-                      className="h-14 w-full rounded-xl border-gray-200 px-4 text-base focus:border-orange-500 focus:ring-orange-500 disabled:cursor-not-allowed disabled:bg-gray-100"
+                      value={userData?.phoneNumber || "Not specified"}
+                      disabled
+                      className="h-14 w-full cursor-not-allowed rounded-xl border-gray-200 bg-gray-100 px-4 text-base"
                     />
                   </div>
                 </div>
-
-                {isEditing && (
-                  <div className="mt-8">
-                    <Button
-                      onClick={handleSave}
-                      disabled={isUpdating}
-                      className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary px-8 py-3 text-base font-medium text-white hover:bg-orange-600 sm:w-auto"
-                    >
-                      {isUpdating ? (
-                        <>
-                          <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="h-4 w-4" />
-                          Save Changes
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                )}
               </>
             ) : (
               <div>
@@ -432,7 +273,7 @@ export default function Settings() {
                           required: "New password is required",
                           minLength: {
                             value: 6,
-                            message: "Password must be at least 8 characters",
+                            message: "Password must be at least 6 characters",
                           },
                         })}
                         placeholder="Enter your new password"
@@ -456,7 +297,7 @@ export default function Settings() {
                       </p>
                     )}
                     <p className="mt-1 text-xs text-gray-500">
-                      Must be at least 8 characters
+                      Must be at least 6 characters
                     </p>
                   </div>
 
