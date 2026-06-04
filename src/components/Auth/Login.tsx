@@ -31,7 +31,7 @@ export default function Login() {
       console.log("login response", respone);
       if (respone.success) {
         toast.success("Login successful");
-        router.push("/admin/dashboard");
+        router.push("/admin/user-management");
         Cookies.set("token", respone?.data?.accessToken);
       }
     } catch {
